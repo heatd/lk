@@ -19,7 +19,7 @@
 #include <endian.h>
 #include <string.h>
 
-#define TRACE_DHCP 0
+#define TRACE_DHCP 1
 
 typedef struct dhcp_msg {
     u8 opcode;
@@ -71,13 +71,18 @@ udp_socket_t *dhcp_udp_handle;
 
 static u8 mac[6];
 
-static void printip(const char *name, u32 x) {
+static void printip(u32 x) {
     union {
         u32 u;
         u8 b[4];
     } ip;
     ip.u = x;
-    printf("%s %d.%d.%d.%d\n", name, ip.b[0], ip.b[1], ip.b[2], ip.b[3]);
+    printf("%d.%d.%d.%d", ip.b[0], ip.b[1], ip.b[2], ip.b[3]);
+}
+
+static void printip_named(const char *s, u32 x) {
+    printf("%s ", s);
+    printip(x);
 }
 
 static volatile int configured = 0;
@@ -178,8 +183,9 @@ static void dhcp_cb(void *data, size_t sz, uint32_t srcip, uint16_t srcport, voi
     if (memcmp(msg->chaddr, mac, 6)) return;
 
 #if TRACE_DHCP
-    printf("dhcp op=%d len=%d from p=%d ip=", msg->opcode, sz, srcport);
-    printip("", srcip);
+    printf("DHCP op %d, len %zu, from p %d, ip=", msg->opcode, sz, srcport);
+    printip(srcip);
+    printf("\n");
 #endif
 
     if (configured) {
@@ -187,16 +193,17 @@ static void dhcp_cb(void *data, size_t sz, uint32_t srcip, uint16_t srcport, voi
         return;
     }
 #if TRACE_DHCP
-    printip("ciaddr", msg->ciaddr);
-    printip("yiaddr", msg->yiaddr);
-    printip("siaddr", msg->siaddr);
-    printip("giaddr", msg->giaddr);
-    printf("chaddr %02x:%02x:%02x:%02x:%02x:%02x\n",
+    printip_named("\tciaddr", msg->ciaddr);
+    printip_named(" yiaddr", msg->yiaddr);
+    printip_named(" siaddr", msg->siaddr);
+    printip_named(" giaddr", msg->giaddr);
+    printf(" chaddr %02x:%02x:%02x:%02x:%02x:%02x\n",
            msg->chaddr[0], msg->chaddr[1], msg->chaddr[2],
            msg->chaddr[3], msg->chaddr[4], msg->chaddr[5]);
 #endif
     sz -= sizeof(dhcp_msg_t);
     opt = msg->options;
+    printf("\toptions: ");
     while (sz >= 2) {
         sz -= 2;
         if (opt[1] > sz) {
@@ -229,15 +236,17 @@ static void dhcp_cb(void *data, size_t sz, uint32_t srcip, uint16_t srcport, voi
     }
 done:
 #if TRACE_DHCP
+    printf("\n\t");
+    if (server) printip_named("server", server);
+    if (netmask) printip_named(" netmask", netmask);
+    if (gateway) printip_named(" gateway", gateway);
+    if (dns) printip_named(" dns", dns);
     printf("\n");
-    if (server) printip("server", server);
-    if (netmask) printip("netmask", netmask);
-    if (gateway) printip("gateway", gateway);
-    if (dns) printip("dns", dns);
 #endif
     if (cfgstate == 0) {
         if (op == OP_DHCPOFFER) {
-            printip("dhcp: offer:", msg->yiaddr);
+            printip_named("dhcp: offer:", msg->yiaddr);
+            printf("\n");
             if (server) {
                 dhcp_request(0xaabbccdd, server, msg->yiaddr);
                 cfgstate = 1;
@@ -245,7 +254,8 @@ done:
         }
     } else if (cfgstate == 1) {
         if (op == OP_DHCPACK) {
-            printip("dhcp: ack:", msg->yiaddr);
+            printip_named("dhcp: ack:", msg->yiaddr);
+            printf("\n");
             minip_set_ipaddr(msg->yiaddr);
             configured = 1;
         }

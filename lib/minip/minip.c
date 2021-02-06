@@ -27,7 +27,7 @@ static struct list_node arp_list = LIST_INITIAL_VALUE(arp_list);
 // TODO
 // 1. Tear endian code out into something that flips words before/after tx/rx calls
 
-#define LOCAL_TRACE 0
+#define LOCAL_TRACE 1
 static uint32_t minip_ip      = IPV4_NONE;
 static uint32_t minip_netmask = IPV4_NONE;
 static uint32_t minip_broadcast = IPV4_BCAST;
@@ -202,6 +202,10 @@ status_t minip_ipv4_send(pktbuf_t *p, uint32_t dest_addr, uint8_t proto) {
     }
 
 ready:
+    if (LOCAL_TRACE) {
+        printf("sending ipv4\n");
+    }
+
     minip_build_mac_hdr(eth, dst_mac, ETH_TYPE_IPV4);
     minip_build_ipv4_hdr(ip, dest_addr, proto, data_len);
 
