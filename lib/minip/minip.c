@@ -152,13 +152,25 @@ status_t minip_ipv4_send(pktbuf_t *p, uint32_t dest_addr, uint8_t proto) {
     struct ipv4_hdr *ip = pktbuf_prepend(p, sizeof(struct ipv4_hdr));
     struct eth_hdr *eth = pktbuf_prepend(p, sizeof(struct eth_hdr));
 
-
+    // are we sending a broadcast packet?
     if (dest_addr == IPV4_BCAST || dest_addr == minip_broadcast) {
         dst_mac = bcast_mac;
         goto ready;
     }
 
-    dst_mac = arp_get_dest_mac(dest_addr);
+    // is this a local subnet packet or do we need to send to the router?
+    uint32_t target_addr = dest_addr;
+    printf("dest %#x netmask %#x\n", dest_addr, minip_netmask);
+    if ((dest_addr & minip_netmask) != (minip_ip & minip_netmask)) {
+        // need to use the gateway
+        if (minip_gateway == IPV4_NONE) {
+            return ERR_NOT_FOUND; // TODO: better error code
+        }
+
+        target_addr = minip_gateway;
+    }
+
+    dst_mac = arp_get_dest_mac(target_addr);
     if (!dst_mac) {
         pktbuf_free(p, true);
         ret = -EHOSTUNREACH;

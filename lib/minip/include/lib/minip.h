@@ -63,6 +63,7 @@ status_t udp_close(udp_socket_t *handle);
 /* tcp */
 typedef struct tcp_socket tcp_socket_t;
 
+status_t tcp_connect(tcp_socket_t **handle, uint32_t addr, uint16_t port);
 status_t tcp_open_listen(tcp_socket_t **handle, uint16_t port);
 status_t tcp_accept_timeout(tcp_socket_t *listen_socket, tcp_socket_t **accept_socket, lk_time_t timeout);
 status_t tcp_close(tcp_socket_t *socket);
