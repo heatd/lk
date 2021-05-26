@@ -90,6 +90,7 @@ extern tx_func_t minip_tx_handler;
 typedef struct udp_hdr udp_hdr_t;
 static const uint8_t bcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
+// ARP cache
 void arp_cache_init(void);
 void arp_cache_update(uint32_t addr, const uint8_t mac[6]);
 uint8_t *arp_cache_lookup(uint32_t addr);
@@ -101,7 +102,7 @@ uint16_t rfc1701_chksum(const uint8_t *buf, size_t len);
 uint16_t rfc768_chksum(struct ipv4_hdr *ipv4, udp_hdr_t *udp);
 uint16_t ones_sum16(uint32_t sum, const void *_buf, int len);
 
-/* Helper methods for building headers */
+// Helper methods for building headers
 void minip_build_mac_hdr(struct eth_hdr *pkt, const uint8_t *dst, uint16_t type);
 void minip_build_ipv4_hdr(struct ipv4_hdr *ipv4, uint32_t dst, uint8_t proto, uint16_t len);
 

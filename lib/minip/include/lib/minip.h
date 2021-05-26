@@ -41,6 +41,11 @@ void minip_set_macaddr(const uint8_t *addr);
 
 uint32_t minip_get_ipaddr(void);
 void minip_set_ipaddr(const uint32_t addr);
+uint32_t minip_get_netmask(void);
+void minip_set_netmask(const uint32_t mask);
+uint32_t minip_get_broadcast(void); // computed from ipaddr & netmask
+uint32_t minip_get_gateway(void);
+void minip_set_gateway(const uint32_t addr);
 
 void minip_set_hostname(const char *name);
 const char *minip_get_hostname(void);

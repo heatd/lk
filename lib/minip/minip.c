@@ -27,7 +27,7 @@ static struct list_node arp_list = LIST_INITIAL_VALUE(arp_list);
 // TODO
 // 1. Tear endian code out into something that flips words before/after tx/rx calls
 
-#define LOCAL_TRACE 1
+#define LOCAL_TRACE 0
 static uint32_t minip_ip      = IPV4_NONE;
 static uint32_t minip_netmask = IPV4_NONE;
 static uint32_t minip_broadcast = IPV4_BCAST;
@@ -70,6 +70,28 @@ void minip_set_ipaddr(const uint32_t addr) {
     compute_broadcast_address();
 }
 
+uint32_t minip_get_netmask(void) {
+    return minip_netmask;
+}
+
+void minip_set_netmask(const uint32_t mask) {
+    minip_netmask = mask;
+    compute_broadcast_address();
+}
+
+uint32_t minip_get_broadcast(void) {
+    return minip_broadcast;
+}
+
+uint32_t minip_get_gateway(void) {
+    return minip_gateway;
+}
+
+void minip_set_gateway(const uint32_t addr) {
+    minip_gateway = addr;
+    // TODO: check that it is reacheable on local network
+}
+
 void gen_random_mac_address(uint8_t *mac_addr) {
     for (size_t i = 0; i < 6; i++) {
         mac_addr[i] = rand() & 0xff;
@@ -88,10 +110,9 @@ void minip_init(tx_func_t tx_handler, void *tx_arg,
     minip_tx_handler = tx_handler;
     minip_tx_arg = tx_arg;
 
-    minip_ip = ip;
-    minip_netmask = mask;
-    minip_gateway = gateway;
-    compute_broadcast_address();
+    minip_set_ipaddr(ip);
+    minip_set_netmask(mask);
+    minip_set_gateway(gateway);
 
     arp_cache_init();
     net_timer_init();
@@ -123,63 +144,6 @@ void minip_build_ipv4_hdr(struct ipv4_hdr *ipv4, uint32_t dst, uint8_t proto, ui
     ipv4->chksum = rfc1701_chksum((uint8_t *) ipv4, sizeof(struct ipv4_hdr));
 }
 
-int send_arp_request(uint32_t addr) {
-    pktbuf_t *p;
-    struct eth_hdr *eth;
-    struct arp_pkt *arp;
-
-    if ((p = pktbuf_alloc()) == NULL) {
-        return -1;
-    }
-
-    eth = pktbuf_prepend(p, sizeof(struct eth_hdr));
-    arp = pktbuf_append(p, sizeof(struct arp_pkt));
-    minip_build_mac_hdr(eth, bcast_mac, ETH_TYPE_ARP);
-
-    arp->htype = htons(0x0001);
-    arp->ptype = htons(0x0800);
-    arp->hlen = 6;
-    arp->plen = 4;
-    arp->oper = htons(ARP_OPER_REQUEST);
-    arp->spa = minip_ip;
-    arp->tpa = addr;
-    mac_addr_copy(arp->sha, minip_mac);
-    mac_addr_copy(arp->tha, bcast_mac);
-
-    minip_tx_handler(p);
-    return 0;
-}
-
-static void handle_arp_timeout_cb(void *arg) {
-    *(bool *)arg = true;
-}
-
-const uint8_t *get_dest_mac(uint32_t host) {
-    uint8_t *dst_mac = NULL;
-    bool arp_timeout = false;
-    net_timer_t arp_timeout_timer;
-
-    if (host == IPV4_BCAST) {
-        return bcast_mac;
-    }
-
-    dst_mac = arp_cache_lookup(host);
-    if (dst_mac == NULL) {
-        send_arp_request(host);
-        memset(&arp_timeout_timer, 0, sizeof(arp_timeout_timer));
-        net_timer_set(&arp_timeout_timer, handle_arp_timeout_cb, &arp_timeout, 100);
-        while (!arp_timeout) {
-            dst_mac = arp_cache_lookup(host);
-            if (dst_mac) {
-                net_timer_cancel(&arp_timeout_timer);
-                break;
-            }
-        }
-    }
-
-    return dst_mac;
-}
-
 status_t minip_ipv4_send(pktbuf_t *p, uint32_t dest_addr, uint8_t proto) {
     status_t ret = 0;
     size_t data_len = p->dlen;
@@ -194,7 +158,7 @@ status_t minip_ipv4_send(pktbuf_t *p, uint32_t dest_addr, uint8_t proto) {
         goto ready;
     }
 
-    dst_mac = get_dest_mac(dest_addr);
+    dst_mac = arp_get_dest_mac(dest_addr);
     if (!dst_mac) {
         pktbuf_free(p, true);
         ret = -EHOSTUNREACH;

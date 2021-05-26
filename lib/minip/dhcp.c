@@ -19,7 +19,7 @@
 #include <endian.h>
 #include <string.h>
 
-#define TRACE_DHCP 1
+#define TRACE_DHCP 0
 
 typedef struct dhcp_msg {
     u8 opcode;
@@ -117,7 +117,6 @@ static void dhcp_discover(u32 xid) {
 
     *opt++ = OPT_DONE;
 
-    udp_send(&s.msg, sizeof(dhcp_msg_t) + (opt - s.opt), dhcp_udp_handle);
     status_t ret = udp_send(&s.msg, sizeof(dhcp_msg_t) + (opt - s.opt), dhcp_udp_handle);
     if (ret != NO_ERROR) {
         printf("DHCP_DISCOVER failed: %d\n", ret);
@@ -203,7 +202,9 @@ static void dhcp_cb(void *data, size_t sz, uint32_t srcip, uint16_t srcport, voi
 #endif
     sz -= sizeof(dhcp_msg_t);
     opt = msg->options;
+#if TRACE_DHCP
     printf("\toptions: ");
+#endif
     while (sz >= 2) {
         sz -= 2;
         if (opt[1] > sz) {
@@ -256,7 +257,21 @@ done:
         if (op == OP_DHCPACK) {
             printip_named("dhcp: ack:", msg->yiaddr);
             printf("\n");
+
+            // set the ip address
             minip_set_ipaddr(msg->yiaddr);
+
+            // optionally set other addresses
+            if (netmask) {
+                minip_set_netmask(netmask);
+            } else {
+                // TODO: compute a sane netmask?
+            }
+
+            if (gateway) {
+                minip_set_gateway(gateway);
+            }
+
             configured = 1;
         }
     }
@@ -265,7 +280,7 @@ done:
 static int dhcp_thread(void *arg) {
     for (;;) {
         if (configured) break;
-        thread_sleep(500);
+        thread_sleep(1000);
         if (configured) break;
         dhcp_discover(0xaabbccdd);
     }

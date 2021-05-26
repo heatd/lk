@@ -75,12 +75,12 @@ minip_usage:
                 arp_cache_dump();
                 break;
 
-            case 's': {
-                uint32_t ipaddr = minip_get_ipaddr();
-
+            case 's':
                 printf("hostname: %s\n", minip_get_hostname());
-                printf("ip: %u.%u.%u.%u\n", IPV4_SPLIT(ipaddr));
-            }
+                printf("ip: %u.%u.%u.%u\n", IPV4_SPLIT(minip_get_ipaddr()));
+                printf("netmask: %u.%u.%u.%u\n", IPV4_SPLIT(minip_get_netmask()));
+                printf("broadcast: %u.%u.%u.%u\n", IPV4_SPLIT(minip_get_broadcast()));
+                printf("gateway: %u.%u.%u.%u\n", IPV4_SPLIT(minip_get_gateway()));
             break;
             case 't': {
                 uint32_t count = 1;
