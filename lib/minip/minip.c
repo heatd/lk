@@ -22,8 +22,6 @@
 #include <lk/list.h>
 #include <kernel/thread.h>
 
-static struct list_node arp_list = LIST_INITIAL_VALUE(arp_list);
-
 // TODO
 // 1. Tear endian code out into something that flips words before/after tx/rx calls
 
@@ -160,7 +158,6 @@ status_t minip_ipv4_send(pktbuf_t *p, uint32_t dest_addr, uint8_t proto) {
 
     // is this a local subnet packet or do we need to send to the router?
     uint32_t target_addr = dest_addr;
-    printf("dest %#x netmask %#x\n", dest_addr, minip_netmask);
     if ((dest_addr & minip_netmask) != (minip_ip & minip_netmask)) {
         // need to use the gateway
         if (minip_gateway == IPV4_NONE) {
@@ -178,9 +175,7 @@ status_t minip_ipv4_send(pktbuf_t *p, uint32_t dest_addr, uint8_t proto) {
     }
 
 ready:
-    if (LOCAL_TRACE) {
-        printf("sending ipv4\n");
-    }
+    LTRACEF("sending\n");
 
     minip_build_mac_hdr(eth, dst_mac, ETH_TYPE_IPV4);
     minip_build_ipv4_hdr(ip, dest_addr, proto, data_len);

@@ -89,6 +89,11 @@ enum {
 extern tx_func_t minip_tx_handler;
 typedef struct udp_hdr udp_hdr_t;
 static const uint8_t bcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+typedef uint32_t ipv4_addr;
+typedef union {
+    uint32_t u;
+    uint8_t b[4];
+} ipv4_t;
 
 // ARP cache
 void arp_cache_init(void);

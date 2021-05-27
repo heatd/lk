@@ -23,9 +23,7 @@
 #include <platform.h>
 #include <arch/atomic.h>
 
-#define LOCAL_TRACE 1
-
-typedef uint32_t ipv4_addr;
+#define LOCAL_TRACE 0
 
 typedef struct tcp_header {
     uint16_t source_port;
@@ -219,7 +217,7 @@ static void dump_socket(tcp_socket_t *s) {
 }
 
 static tcp_socket_t *lookup_socket(ipv4_addr remote_ip, ipv4_addr local_ip, uint16_t remote_port, uint16_t local_port) {
-    LTRACEF("remote ip 0x%x local ip 0x%x remote port %u local port %u\n", remote_ip, local_ip, remote_port, local_port);
+    LTRACEF_LEVEL(2, "remote ip 0x%x local ip 0x%x remote port %u local port %u\n", remote_ip, local_ip, remote_port, local_port);
 
     mutex_acquire(&tcp_socket_list_lock);
 
@@ -289,7 +287,7 @@ static void inc_socket_ref(tcp_socket_t *s) {
     DEBUG_ASSERT(s);
 
     __UNUSED int oldval = atomic_add(&s->ref, 1);
-    LTRACEF("caller %p, thread %p, socket %p, ref now %d\n", __GET_CALLER(), get_current_thread(), s, oldval + 1);
+    LTRACEF_LEVEL(2, "caller %p, thread %p, socket %p, ref now %d\n", __GET_CALLER(), get_current_thread(), s, oldval + 1);
     DEBUG_ASSERT(oldval > 0);
 }
 
@@ -297,7 +295,7 @@ static bool dec_socket_ref(tcp_socket_t *s) {
     DEBUG_ASSERT(s);
 
     int oldval = atomic_add(&s->ref, -1);
-    LTRACEF("caller %p, thread %p, socket %p, ref now %d\n", __GET_CALLER(), get_current_thread(), s, oldval - 1);
+    LTRACEF_LEVEL(2, "caller %p, thread %p, socket %p, ref now %d\n", __GET_CALLER(), get_current_thread(), s, oldval - 1);
 
     if (oldval == 1) {
         LTRACEF("destroying socket\n");
