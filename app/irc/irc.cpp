@@ -64,6 +64,8 @@ void irc_client::init() {
 }
 
 void irc_client::shutdown() {
+    lktl::auto_lock al(&lock_);
+
     if (sock_) {
         if (state_ == HANDSHOOK) {
             // send quit
@@ -72,6 +74,7 @@ void irc_client::shutdown() {
             thread_sleep(1000);
         }
         tcp_close(sock_);
+        sock_ = nullptr;
     }
 }
 
@@ -150,8 +153,6 @@ status_t irc_client::console_input_line(const char *line, bool &exit) {
         return NO_ERROR;
     }
 
-    lktl::auto_lock al(&lock_);
-
     // see if it starts with /
     if (line[0] == '/') {
         if (line[1] == 0) {
@@ -168,6 +169,8 @@ status_t irc_client::console_input_line(const char *line, bool &exit) {
             return NO_ERROR;
         }
     }
+
+    lktl::auto_lock al(&lock_);
 
     // send it as a privmsg
     char buf[256];
