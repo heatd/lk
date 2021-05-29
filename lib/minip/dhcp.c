@@ -272,6 +272,8 @@ done:
                 minip_set_gateway(gateway);
             }
 
+            // signal that minip is ready to be used
+            minip_set_configured();
             configured = 1;
         }
     }
@@ -289,10 +291,8 @@ static int dhcp_thread(void *arg) {
 
 static thread_t *dhcp_thr;
 
-void minip_init_dhcp(tx_func_t tx_func, void *tx_arg) {
+void minip_start_dhcp() {
     minip_get_macaddr(mac);
-
-    minip_init(tx_func, tx_arg, IPV4_NONE, IPV4_NONE, IPV4_NONE);
 
     int ret = udp_open(IPV4_BCAST, DHCP_CLIENT_PORT, DHCP_SERVER_PORT, &dhcp_udp_handle);
     printf("dhcp opened udp: %d\n", ret);
